@@ -252,8 +252,9 @@ modded class RadioBase
 };
 
 // ---------- Предмет «Музыкальная флешка» (сторона клиента) ----------
-// Класс описан в config.cpp мода @unesennye_music_db (CfgVehicles.UnesennyeMusicCard)
-modded class UnesennyeMusicCard
+// Класс описан в config.cpp мода @unesennye_music_db (CfgVehicles.UnesennyeMusicCard_Base).
+// Модинг базового класса покрывает все 5 карточек UnesennyeMusicCard0..4.
+modded class UnesennyeMusicCard_Base
 {
     // Использование флешки рядом с рацией: ищем RadioBase через GetObjectsAtPosition
     override void ActionAttach(out UserContext context)
