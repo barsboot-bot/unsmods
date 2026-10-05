@@ -61,19 +61,6 @@ class UnesennyePortableRadioManager
         return m_Slots.Count() - 1;
     }
 
-    private void ReleaseSlot(int radioID)
-    {
-        for (int i = 0; i < m_Slots.Count(); i++)
-        {
-            if (m_Slots[i] == radioID)
-            {
-                m_Slots.Remove(i);
-                m_Sounds.Remove(i);
-                return;
-            }
-        }
-    }
-
     // PlayTrackFromRadio — 3D-звук из позиции рации (только SEffectManager.PlaySound)
     void PlayTrackFromRadio(int radioID, string soundSet)
     {
@@ -112,7 +99,7 @@ class UnesennyePortableRadioManager
         }
     }
 
-    // StopTrackFromRadio — корректное уничтожение источника
+    // StopTrackFromRadio — уничтожение источника + освобождение слота (без утечек)
     void StopTrackFromRadio(int radioID)
     {
         for (int i = 0; i < m_Slots.Count(); i++)
@@ -125,7 +112,9 @@ class UnesennyePortableRadioManager
                 m_Sounds[i] = null;
                 Print(string.Format("[Unesennye Radio] Stopped radio %d.", radioID));
             }
-            break;
+            m_Slots.Remove(i);
+            m_Sounds.Remove(i);
+            return;
         }
     }
 
