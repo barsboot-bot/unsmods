@@ -116,6 +116,34 @@ class CfgSoundSets
     };
 };
 
+// =====================================================================
+// ДОБАВЛЕНО v1.1.0: ПРЕДМЕТ «Музыкальная флешка» UnesennyeMusicCard
+// CfgUnesennyeTracks ниже НЕ удалён и НЕ изменён — трек-листы ссылаются
+// на него классами UnesennyeMusicCardN (индекс N == индекс track_N).
+// =====================================================================
+class CfgVehicles
+{
+    class ItemBase;
+
+    // Базовый класс флешки (используется как тип предмета)
+    class UnesennyeMusicCard_Base : ItemBase
+    {
+        author = "KRa Tos (Константин)"; // водяной знак
+        displayName = "Unesennye Music Card";
+        descriptionShort = "USB-флешка с записанной музыкой из базы Unesennye. Вставьте в рацию для воспроизведения. Author: KRa Tos (Константин)";
+        model = "\dz\gear\notebook.p3d";      // заглушка; замените на .p3d флешки/кассеты при наличии
+        icon = "DZ_Gear_Books_Epics";
+        itemBank[] = {"InventoryMuseumSlot"}; // маленький предмет, помещается в карманы
+    };
+
+    // 5 предметов под 5 треков CfgUnesennyeTracks (треки НЕ дублируются — только ссылки индексом)
+    class UnesennyeMusicCard0 : UnesennyeMusicCard_Base {}; // -> track_0
+    class UnesennyeMusicCard1 : UnesennyeMusicCard_Base {}; // -> track_1
+    class UnesennyeMusicCard2 : UnesennyeMusicCard_Base {}; // -> track_2
+    class UnesennyeMusicCard3 : UnesennyeMusicCard_Base {}; // -> track_3
+    class UnesennyeMusicCard4 : UnesennyeMusicCard_Base {}; // -> track_4
+};
+
 // ---------- Реестр треков (читается скриптами через Config* API) ----------
 // trackID = имя класса без префикса "track_" — сервер валидирует по нему
 class CfgUnesennyeTracks

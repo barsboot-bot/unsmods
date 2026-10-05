@@ -103,6 +103,13 @@ class UnesennyeServerSystem
         return null;
     }
 
+    // ===== ДОБАВЛЕНО v1.1.0: публичный доступ к статусу авторизации =====
+    // Требуется модулю раций (Unesennye_Server_Radio.c). Логика 100-204 не изменена.
+    bool IsPlayerAuthorized(int playerID)
+    {
+        return FindAuthorized(playerID) != null;
+    }
+
     void RemoveEntry(int playerID)
     {
         for (int i = 0; i < m_AuthEntries.Count(); i++)
