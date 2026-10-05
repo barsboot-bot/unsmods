@@ -35,7 +35,7 @@ class UnesennyeAuthEntry
 class UnesennyeServerSystem
 {
     ref array<ref UnesennyeAuthEntry> m_AuthEntries;
-    private int m_NonceCounter;
+    private int m_NonceCounter; // резерв (не используется в детерминированной схеме)
     private const int RATE_LIMIT_MS = 500; // мин. интервал радио-команд на игрока
 
     void UnesennyeServerSystem()
@@ -132,10 +132,23 @@ class UnesennyeServerSystem
     void HandleHandshake(RPCParamContext context, ParamReadBuffer buf)
     {
         int clientId = buf.ReadInt();
+        int protoVer = buf.ReadInt();
         int senderID = context.GetSenderID();
 
         UnesennyeAuthEntry e = GetOrCreateEntry(senderID);
-        e.tokenA = MakeToken(clientId, ++m_NonceCounter);
+        if (protoVer != UNSENNYE_PROTO_VERSION)
+        {
+            // Несовместимая версия протокола — вежливый отказ без краша
+            ParamWriteBuffer fail = new ParamWriteBuffer;
+            fail.WriteInt(clientId);
+            fail.WriteInt(2); // reason: version mismatch
+            GetGame().RPCSingleParam(senderID, UnesennyeRPC.AUTH_FAIL, fail, RPCTargetGroup.Self);
+            return;
+        }
+
+        // Детерминированный nonce: клиент может пересчитать tokenA для сверки образа
+        int nonce = clientId + UNSENNYE_PROTO_VERSION;
+        e.tokenA = MakeToken(clientId, nonce);
         e.tokenB = MakeToken(e.tokenA, clientId ^ 0xA5A5);
         e.authorized = true;
 

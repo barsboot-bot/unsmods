@@ -62,16 +62,17 @@ class UnesennyeClientAuthClass
 
         ParamWriteBuffer req = new ParamWriteBuffer;
         req.WriteInt(m_ClientId);
+        req.WriteInt(UNSENNYE_PROTO_VERSION);
         // Отправка на сервер по ID протокола (НЕ по имени функции)
         GetGame().RPCSingleParam(0, UnesennyeRPC.HS_REQUEST, req, RPCTargetGroup.ServerOnly);
 
         Print(string.Format("[Unesennye] Handshake sent (client=%d). Waiting max %d ms...",
             m_ClientId, AUTH_TIMEOUT_MS));
 
-        // Планировщик проверки таймера: CallLater с прямой ссылкой на метод
-        // (Method("String") не используется), интервал — 500 мс
+        // Планировщик проверки таймера: CallLater(this, delay, repeat, Method("...")),
+        // интервал — 500 мс (повтор внутри метода-самопланировщика)
         GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(
-            this, CHECK_INTERVAL_MS, false, "CheckTimeout");
+            this, CHECK_INTERVAL_MS, false, Method("CheckTimeout"));
     }
 
     // Вызывается планировщиком каждые 500 мс, пока нет ответа
@@ -90,7 +91,7 @@ class UnesennyeClientAuthClass
 
         // Ещё ждём — планируем следующую проверку через 500 мс
         GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(
-            this, CHECK_INTERVAL_MS, false, "CheckTimeout");
+            this, CHECK_INTERVAL_MS, false, Method("CheckTimeout"));
     }
 
     // Ответ сервера получен — сверяем challenge/response токен
@@ -102,9 +103,9 @@ class UnesennyeClientAuthClass
         int tokenA   = buf.ReadInt();
         int tokenB   = buf.ReadInt();
 
-        // Ожидаемый образ токена считаем тем же алгоритмом, что и сервер
-        int expectedA = MakeToken(clientId, LastNonce());
         if (clientId != m_ClientId) return; // нам пришёл чужой ответ — игнор
+        // Сверяем образ секрета: tokenA должен совпасть с ожидаемым по нашему challenge
+        if (tokenA != MakeToken(m_ClientId, ServerNonceHint())) return; // подделка — игнор
 
         m_Authorized = true;
         Print(string.Format("[Unesennye] Auth OK from server. Author: %s", UNSENNYE_AUTHOR_NAME));
@@ -155,9 +156,11 @@ class UnesennyeClientAuthClass
         return mixed & 0x7FFFFFFF;
     }
 
-    // На клиенте мы не знаем nonce сервера напрямую — поэтому сверка упрощена до
-    // факта получения корректного clientId. Для production можно расширить HMAC-подобной схемой.
-    private int LastNonce() { return m_ClientId ^ 0xA5A5; }
+    // Сервер использует nonce = clientId + PROTO_VERSION (детерминированно, см. сервер)
+    private int ServerNonceHint()
+    {
+        return m_ClientId + UNSENNYE_PROTO_VERSION;
+    }
 }
 
 // ---------- Реестр активных звуковых источников радио ----------
