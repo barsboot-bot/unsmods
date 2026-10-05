@@ -179,25 +179,25 @@ class UnesennyeRadioClient
     {
         // Защита: без успешного handshake (4000 мс / опрос 500 мс) ничего не отправляем
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
-        GetGame().RPCSingleParam(null, UnesennyeRadioRPC.RADIO_INSERT_CARD, new Param2<int, int>(radioID, trackID));
+        GetGame().RPCSingleParam(0, UnesennyeRadioRPC.RADIO_INSERT_CARD, new Param2<int, int>(radioID, trackID), RPCTargetGroup.ServerOnly);
     }
 
     static void RequestEjectCard(int radioID)
     {
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
-        GetGame().RPCSingleParam(null, UnesennyeRadioRPC.RADIO_EJECT_CARD, new Param1<int>(radioID));
+        GetGame().RPCSingleParam(0, UnesennyeRadioRPC.RADIO_EJECT_CARD, new Param1<int>(radioID), RPCTargetGroup.ServerOnly);
     }
 
     static void RequestPlayTrack(int radioID, int trackID)
     {
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
-        GetGame().RPCSingleParam(null, UnesennyeRadioRPC.RADIO_PLAY_TRACK, new Param2<int, int>(radioID, trackID));
+        GetGame().RPCSingleParam(0, UnesennyeRadioRPC.RADIO_PLAY_TRACK, new Param2<int, int>(radioID, trackID), RPCTargetGroup.ServerOnly);
     }
 
     static void RequestStopTrack(int radioID)
     {
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
-        GetGame().RPCSingleParam(null, UnesennyeRadioRPC.RADIO_STOP_TRACK, new Param1<int>(radioID));
+        GetGame().RPCSingleParam(0, UnesennyeRadioRPC.RADIO_STOP_TRACK, new Param1<int>(radioID), RPCTargetGroup.ServerOnly);
     }
 
     // ===== Входящий SERVER->CLIENT broadcast: включить трек =====
@@ -206,8 +206,8 @@ class UnesennyeRadioClient
         // Общая защита системы: без авторизации игнорируем (handshake обязателен)
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
 
-        Param2<int, int> p = new Param2<int, int>;
-        if (!buf.Read(p)) return;
+        Param2<int, int> p;
+        if (!buf.ReadObject(p)) return;
         int radioID = p.arg1;
         int trackID = p.arg2;
 
@@ -224,8 +224,8 @@ class UnesennyeRadioClient
     static void OnBroadcastStop(RPCParamContext context, ParamsReadContext buf)
     {
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
-        Param1<int> p = new Param1<int>;
-        if (!buf.Read(p)) return;
+        Param1<int> p;
+        if (!buf.ReadObject(p)) return;
         GetManager().StopTrackFromRadio(p.param);
     }
 };

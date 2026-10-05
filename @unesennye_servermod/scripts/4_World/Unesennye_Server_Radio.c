@@ -126,8 +126,8 @@ class UnesennyeServerRadioModule
         radioOut = null;
         int senderID = context.GetSenderID();
 
-        // КЛЮЧЕВАЯ ЗАЩИТА: без успешного handshake (серверный мод машин) — молча игнор
-        if (!UnesennyeServerAuth.IsAuthorized(senderID)) return null;
+        // КЛЮЧЕВАЯ ЗАЩИТА: без успешного handshake (таймаут 4000 мс) — молча игнор
+        if (!UnesennyeServerRPC.g_UnesennyeServer || !UnesennyeServerRPC.g_UnesennyeServer.IsPlayerAuthorized(senderID)) return null;
 
         Man player = GetGame().GetPlayerByID(senderID);
         if (!player) return null;
@@ -143,8 +143,8 @@ class UnesennyeServerRadioModule
     // ===== 300: вставить флешку =====
     void OnInsertCard(RPCParamContext context, ParamsReadContext buf)
     {
-        Param2<int, int> p = new Param2<int, int>;
-        if (!buf.Read(p)) return;
+        Param2<int, int> p;
+        if (!buf.ReadObject(p)) return;
         int radioID = p.arg1;
         int trackID = p.arg2;
 
@@ -164,8 +164,8 @@ class UnesennyeServerRadioModule
     // ===== 301: извлечь флешку =====
     void OnEjectCard(RPCParamContext context, ParamsReadContext buf)
     {
-        Param1<int> p = new Param1<int>;
-        if (!buf.Read(p)) return;
+        Param1<int> p;
+        if (!buf.ReadObject(p)) return;
         int radioID = p.param;
 
         IEntity radioEnt;
@@ -182,8 +182,8 @@ class UnesennyeServerRadioModule
     // ===== 302: включить трек =====
     void OnPlayTrack(RPCParamContext context, ParamsReadContext buf)
     {
-        Param2<int, int> p = new Param2<int, int>;
-        if (!buf.Read(p)) return;
+        Param2<int, int> p;
+        if (!buf.ReadObject(p)) return;
         int radioID = p.arg1;
         int trackID = p.arg2;
 
@@ -226,8 +226,8 @@ class UnesennyeServerRadioModule
     // ===== 303: выключить трек (рассылка остановки всем) =====
     void OnStopTrack(RPCParamContext context, ParamsReadContext buf)
     {
-        Param1<int> p = new Param1<int>;
-        if (!buf.Read(p)) return;
+        Param1<int> p;
+        if (!buf.ReadObject(p)) return;
         int radioID = p.param;
 
         IEntity radioEnt;
@@ -239,18 +239,9 @@ class UnesennyeServerRadioModule
     }
 };
 
-// ---------- Фасад авторизации поверх существующей системы ----------
-// Использует готовый реестр handshake из Unesennye_Server_System.c —
-// сама система НЕ изменяется, только читается её состояние.
-class UnesennyeServerAuth
-{
-    static bool IsAuthorized(int playerID)
-    {
-        UnesennyeServerSystem srv = UnesennyeServerRPC.g_UnesennyeServer;
-        if (!srv) return false; // серверный мод машин не инициализирован => рации мертвы
-        return srv.IsPlayerAuthorized(playerID);
-    }
-}
+// ---------- Проверка авторизации (переиспользуем существующий реестр handshake) ----------
+// UnesennyeServerSystem.IsPlayerAuthorized() добавлена в v1.1.0 как геттер;
+// логика 100-204 не изменена. Без @unesennye_servermod этот код не выполняется вовсе.
 
 // ---------- Диспетчер-адаптер для RegisterServerRpc ----------
 class UnesennyeRadioRPCServer
