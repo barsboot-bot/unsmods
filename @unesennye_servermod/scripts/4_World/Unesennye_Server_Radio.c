@@ -15,7 +15,8 @@ enum UnesennyeRadioRPC
     RADIO_EJECT_CARD = 301,
     RADIO_PLAY_TRACK = 302,
     RADIO_STOP_TRACK = 303,
-    RADIO_BROADCAST  = 304
+    RADIO_BROADCAST  = 304,
+    RADIO_BROADCAST_STOP = 305
 };
 
 static const string UNSENNYE_RADIO_AUTHOR_NAME = "KRa Tos (Константин)"; // водяной знак
@@ -63,7 +64,7 @@ class UnesennyeServerRadioModule
         GetGame().RegisterServerRpc(UnesennyeRadioRPC.RADIO_PLAY_TRACK,  UnesennyeServerRadioModule, "OnPlayTrack");
         GetGame().RegisterServerRpc(UnesennyeRadioRPC.RADIO_STOP_TRACK,  UnesennyeServerRadioModule, "OnStopTrack");
 
-        Print(string.Format("[Unesennye Radio] Server module ACTIVE (RPC 300-304). Author: %s", UNSENNYE_RADIO_AUTHOR_NAME));
+        Print(string.Format("[Unesennye Radio] Server module ACTIVE (RPC 300-305). Author: %s", UNSENNYE_RADIO_AUTHOR_NAME));
     }
 
     // ----- Сессии -----
@@ -170,9 +171,9 @@ class UnesennyeServerRadioModule
         UnesennyeRadioSession s = GetOrCreateSession(context.GetSenderID());
         s.insertedTrack = -1;
 
-        // Останавливаем звучание у всех клиентов
-        GetGame().RPCSingleParam(context.GetSenderID(), UnesennyeRadioRPC.RADIO_BROADCAST,
-            new Param2<int, int>(radioID, 0), RPCTargetGroup.All);
+        // Останавливаем звучание у всех клиентов (broadcast stop = 305)
+        GetGame().RPCSingleParam(context.GetSenderID(), UnesennyeRadioRPC.RADIO_BROADCAST_STOP,
+            new Param1<int>(radioID), RPCTargetGroup.All);
     }
 
     // ===== 302: включить трек =====
@@ -197,9 +198,9 @@ class UnesennyeServerRadioModule
         UnesennyeRadioSession s = GetOrCreateSession(context.GetSenderID());
         if (s.insertedTrack != trackID) return;
 
-        // Ретрансляция всем клиентам рядом (вещание от позиции рации)
+        // Ретрансляция всем клиентам (вещание от позиции рации)
         GetGame().RPCSingleParam(context.GetSenderID(), UnesennyeRadioRPC.RADIO_BROADCAST,
-            new Param2<int, int>(radioID, trackID + 1), RPCTargetGroup.All);
+            new Param2<int, int>(radioID, trackID), RPCTargetGroup.All);
 
         Print(string.Format("[Unesennye Radio] PLAY OK radio=%d track=%d by player=%d | Author: %s",
             radioID, trackID, context.GetSenderID(), UNSENNYE_RADIO_AUTHOR_NAME));
@@ -215,9 +216,9 @@ class UnesennyeServerRadioModule
         IEntity radioEnt;
         if (!ValidateCommon(context, radioID, radioEnt)) return;
 
-        // action=0 => клиенты вызывают StopTrackFromRadio
-        GetGame().RPCSingleParam(context.GetSenderID(), UnesennyeRadioRPC.RADIO_BROADCAST,
-            new Param2<int, int>(radioID, 0), RPCTargetGroup.All);
+        // Клиенты вызывают StopTrackFromRadio (broadcast stop = 305)
+        GetGame().RPCSingleParam(context.GetSenderID(), UnesennyeRadioRPC.RADIO_BROADCAST_STOP,
+            new Param1<int>(radioID), RPCTargetGroup.All);
     }
 };
 

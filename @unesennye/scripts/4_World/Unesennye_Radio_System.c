@@ -20,7 +20,8 @@ enum UnesennyeRadioRPC
     RADIO_STOP_TRACK = 303,    // выключить трек из рации (radioID:int)
 
     // Сервер -> Клиенты
-    RADIO_BROADCAST  = 304     // ретрансляция (radioID:int, trackID:int, action:int)
+    RADIO_BROADCAST  = 304,    // ретрансляция play (radioID:int, trackID:int)
+    RADIO_BROADCAST_STOP = 305 // ретрансляция stop (radioID:int)
 };
 
 static const int UNSENNYE_RADIO_PROTO_VERSION = 1;
@@ -134,7 +135,8 @@ class UnesennyeRadioClient
     {
         // Регистрация CLIENT RPC по числовому ID (авто-регистрация по имени не используется)
         GetGame().RegisterClientRpc(UnesennyeRadioRPC.RADIO_BROADCAST, UnesennyeRadioClient, "OnBroadcastPlay");
-        Print(string.Format("[Unesennye Radio] Client RPC registered (300-304). Author: %s", UNSENNYE_RADIO_AUTHOR_NAME));
+        GetGame().RegisterClientRpc(UnesennyeRadioRPC.RADIO_BROADCAST_STOP, UnesennyeRadioClient, "OnBroadcastStop");
+        Print(string.Format("[Unesennye Radio] Client RPC registered (300-305). Author: %s", UNSENNYE_RADIO_AUTHOR_NAME));
     }
 
     // ===== Исходящие запросы (Param1/Param2 вместо буферов) =====
@@ -163,7 +165,7 @@ class UnesennyeRadioClient
         GetGame().RPCSingleParam(null, UnesennyeRadioRPC.RADIO_STOP_TRACK, new Param1<int>(radioID));
     }
 
-    // ===== Входящий SERVER->CLIENT broadcast (action: 1=play, 0=stop) =====
+    // ===== Входящий SERVER->CLIENT broadcast: включить трек =====
     static void OnBroadcastPlay(RPCParamContext context, ParamsReadContext buf)
     {
         // Общая защита системы: без авторизации игнорируем (handshake обязателен)
@@ -174,18 +176,22 @@ class UnesennyeRadioClient
         int radioID = p.arg1;
         int trackID = p.arg2;
 
-        if (trackID == 0)
-        {
-            GetManager().StopTrackFromRadio(radioID);
-            return;
-        }
-
+        // Трек берём из существующей базы CfgUnesennyeTracks — без дублирования
         string clsName = ConfigGetClassName(trackID, "CfgUnesennyeTracks");
         if (clsName == "") return;
         string soundSet = ConfigReadString(clsName + "\\soundSet", "");
         if (soundSet == "") return;
 
         GetManager().PlayTrackFromRadio(radioID, soundSet);
+    }
+
+    // ===== Входящий SERVER->CLIENT broadcast: выключить =====
+    static void OnBroadcastStop(RPCParamContext context, ParamsReadContext buf)
+    {
+        if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
+        Param1<int> p = new Param1<int>;
+        if (!buf.Read(p)) return;
+        GetManager().StopTrackFromRadio(p.param);
     }
 };
 
