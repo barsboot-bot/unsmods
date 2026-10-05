@@ -175,22 +175,17 @@ class UnesennyeServerSystem
         ref array<int>    ids    = new array<int>;
         ref array<string> titles = new array<string>;
 
-        Man player = GetGame().GetPlayerByID(senderID);
-        if (player)
+        // Реестр треков серверу доступен напрямую из config.cpp мода @unesennye_music_db.
+        // track_<N>: N = индекс класса в CfgUnesennyeTracks (см. README по добавлению треков)
+        int classes = ConfigGetClassCount("CfgUnesennyeTracks");
+        for (int i = 0; i < classes; i++)
         {
-            TNewScriptDataContext ctx = TNewScriptDataContext.Cast(
-                GetGame().CreateContext(TNewScriptDataContext, player));
-            int classes = ConfigGetClassCount("CfgUnesennyeTracks");
-            for (int i = 0; i < classes; i++)
-            {
-                string clsName = ConfigGetClassName(i, "CfgUnesennyeTracks");
-                if (clsName == "") continue;
-                string file  = ConfigReadString(clsName + "\\file", "", ctx);
-                string title = ConfigReadString(clsName + "\\title", clsName, ctx);
-                if (file.Length() == 0) continue;
-                ids.Insert(i);
-                titles.Insert(title);
-            }
+            string clsName = ConfigGetClassName(i, "CfgUnesennyeTracks");
+            if (clsName == "") continue;
+            string file = ConfigReadString(clsName + "\\file", "");
+            if (file.Length() == 0) continue;
+            ids.Insert(i);
+            titles.Insert(ConfigReadString(clsName + "\\title", clsName));
         }
 
         ParamWriteBuffer final = new ParamWriteBuffer;
@@ -220,17 +215,17 @@ class UnesennyeServerSystem
         if (now - e.lastRadioCmdMs < RATE_LIMIT_MS) return;
         e.lastRadioCmdMs = now;
 
-        // Валидация 1: трек существует в CfgUnesennyeTracks?
-        Man player = GetGame().GetPlayerByID(senderID);
-        if (!player) return;
-        TNewScriptDataContext ctx = TNewScriptDataContext.Cast(
-            GetGame().CreateContext(TNewScriptDataContext, player));
-        string trackCls = "CfgUnesennyeTracks\\track_" + trackID.ToString();
-        if (!ConfigIsExist(trackCls, ctx)) return;
-
-        // Валидация 2: машина существует и отправитель реально в ней сидит?
+        // Индекс в реестре = порядковый номер класса track_<N> в конфиге.
+        // Машина существует? (получаем объект по сетевому ID)
         CarScript car = Cast<CarScript>(GetEntityFromID(carID));
         if (!car) return;
+
+        string clsName = ConfigGetClassName(trackID, "CfgUnesennyeTracks");
+        if (clsName == "" || ConfigReadString(clsName + "\\file", "").Length() == 0) return;
+
+        // Валидация 2: отправитель реально находится в этой машине?
+        Man player = GetGame().GetPlayerByID(senderID);
+        if (!player) return;
         if (!IsPlayerInVehicle(player, car)) return;
 
         // Ретрансляция всем клиентам — пассажиры слышат синхронно

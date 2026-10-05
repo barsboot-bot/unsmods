@@ -69,10 +69,10 @@ class UnesennyeClientAuthClass
         Print(string.Format("[Unesennye] Handshake sent (client=%d). Waiting max %d ms...",
             m_ClientId, AUTH_TIMEOUT_MS));
 
-        // Планировщик проверки таймера: CallLater(this, delay, repeat, Method("...")),
+        // Планировщик проверки таймера: CallLater(this, delay, repeat, ref-имя метода),
         // интервал — 500 мс (повтор внутри метода-самопланировщика)
         GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(
-            this, CHECK_INTERVAL_MS, false, Method("CheckTimeout"));
+            this, CHECK_INTERVAL_MS, false, "CheckTimeout");
     }
 
     // Вызывается планировщиком каждые 500 мс, пока нет ответа
@@ -91,7 +91,7 @@ class UnesennyeClientAuthClass
 
         // Ещё ждём — планируем следующую проверку через 500 мс
         GetGame().GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(
-            this, CHECK_INTERVAL_MS, false, Method("CheckTimeout"));
+            this, CHECK_INTERVAL_MS, false, "CheckTimeout");
     }
 
     // Ответ сервера получен — сверяем challenge/response токен
@@ -241,12 +241,11 @@ class UnesennyeCarRadio
         if (existing && existing.trackID == trackID && existing.source) return;
         if (existing) existing.Stop();
 
-        // Ищем конфиг трека: CfgUnesennyeTracks\track_<id>\soundSet
-        TNewScriptDataContext ctx = TNewScriptDataContext.Cast(
-            GetGame().CreateContext(TNewScriptDataContext, GetGame().GetPlayer()));
-        string cls = "CfgUnesennyeTracks\\track_" + trackID.ToString();
-        if (!ConfigIsExist(cls, ctx)) return;
-        string soundSet = ConfigReadString(cls + "\\soundSet", "", ctx);
+        // Конфиг трека: N-й класс CfgUnesennyeTracks (track_<N>) -> soundSet.
+        // Клиент читает тот же config.cpp мода @unesennye_music_db.
+        string clsName = ConfigGetClassName(trackID, "CfgUnesennyeTracks");
+        if (clsName == "") return;
+        string soundSet = ConfigReadString(clsName + "\\soundSet", "");
         if (soundSet.Length() == 0) return;
 
         // 3D-звук из позиции машины — ТОЛЬКО SEffectManager.PlaySound (движковый API)
@@ -362,6 +361,14 @@ class UnesennyeRadioUI
         GetGame().RPCSingleParam(0, UnesennyeRPC.RADIO_PLAY, req, RPCTargetGroup.ServerOnly);
     }
 
+    void RequestTrackList(int carID)
+    {
+        if (!m_Enabled) return;
+        ParamWriteBuffer req = new ParamWriteBuffer;
+        req.WriteInt(MathRandom(1, 999999)); // clientId запроса
+        GetGame().RPCSingleParam(0, UnesennyeRPC.TRACK_LIST_REQ, req, RPCTargetGroup.ServerOnly);
+    }
+
     void RequestStopRadio(int carID)
     {
         if (!m_Enabled) return;
@@ -434,24 +441,47 @@ class UnesennyeClientRPC
 // ---------- Модификация CarScript: точка входа радио в машинах ----------
 modded class CarScript
 {
-    // При входе игрока в машину открываем UI радио (если авторизован)
-    override void EOnInteract(PlayerBase player, EntityAI item_in_hands, float item_damage, ref Man actor, int action_type)
+    // Вызывается из PlayerBase.UnesennyeCarRadioHook при посадке локального игрока
+    void UnesennyeOnPlayerEnters()
     {
-        super.EOnInteract(player, item_in_hands, item_damage, actor, action_type);
         if (GetGame().IsDedicated()) return;
-        if (action_type == InteractionType.IN_VEHICLE && UnesennyeClientRPC.GetAuth().IsAuthorized())
-        {
-            UnesennyeRadioUI.GetOrCreate().Open();
-        }
+        if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
+        UnesennyeRadioUI ui = UnesennyeRadioUI.GetOrCreate();
+        ui.Open();
+        ui.RequestTrackList(GetID());
     }
 
-    // Останавливаем звук при уничтожении машины — никаких висячих источников
-    override void EOnDamage(int body_part, IDZDamageBase damage, vector local_vel, vector pos, float cooldown, float directionAngle)
+    // Уничтожение машины — гасим звуковой источник, никаких висячих SoundSource
+    override void EOnDestroy(IEntity data0, IEntity data1)
     {
-        super.EOnDamage(body_part, damage, pos, local_vel, cooldown, directionAngle);
-        if (!GetGame().IsDedicated() && IsDestroy())
+        super.EOnDestroy(data0, data1);
+        if (!GetGame().IsDedicated())
         {
             UnesennyeCarRadio.GetOrCreate().StopTrackInCar(GetID());
+        }
+    }
+}
+
+
+// ---------- Хук входа в машину: официальный экшен DayZ ----------
+modded class ActionEntryToCar
+{
+    override void OnExecuteSuccess(PlayerBase player)
+    {
+        super.OnExecuteSuccess(player);
+        if (GetGame().IsDedicated() || !player || player != GetGame().GetPlayer()) return;
+        // Машина, в которую сел локальный игрок — ищем рядом через GetObjectsAtPosition
+        ref array<IEntity> items = new array<IEntity>;
+        vector pos = player.GetPosition();
+        GetGame().GetObjectsAtPosition(pos, 2.0, 2.0, 2.0, items, null, null);
+        for (int i = 0; i < items.Count(); i++)
+        {
+            CarScript cs = Cast<CarScript>(items[i]);
+            if (cs)
+            {
+                cs.UnesennyeOnPlayerEnters();
+                break;
+            }
         }
     }
 }
