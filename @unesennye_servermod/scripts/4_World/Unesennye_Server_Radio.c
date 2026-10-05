@@ -24,12 +24,14 @@ static const string UNSENNYE_RADIO_AUTHOR_NAME = "KRa Tos (Константин)
 // ---------- Запись о состоянии рации у игрока ----------
 class UnesennyeRadioSession
 {
+    int playerID;       // сетевой ID игрока-владельца сессии
     int radioID;        // сетевой ID рации
     int insertedTrack;  // какой трек «во флешке» (-1 = пусто)
     int lastCmdMs;      // анти-спам кулдаун
 
     void UnesennyeRadioSession()
     {
+        playerID = 0;
         radioID = 0;
         insertedTrack = -1;
         lastCmdMs = 0;
@@ -72,10 +74,10 @@ class UnesennyeServerRadioModule
     {
         for (int i = 0; i < m_Sessions.Count(); i++)
         {
-            if (m_Sessions[i].radioID == senderID) return m_Sessions[i];
+            if (m_Sessions[i].playerID == senderID) return m_Sessions[i];
         }
         UnesennyeRadioSession s = new UnesennyeRadioSession;
-        s.radioID = senderID;
+        s.playerID = senderID;
         m_Sessions.Insert(s);
         return s;
     }
@@ -152,6 +154,7 @@ class UnesennyeServerRadioModule
         if (!TrackExists(trackID)) return;
 
         UnesennyeRadioSession s = GetOrCreateSession(context.GetSenderID());
+        s.radioID = radioID;
         s.insertedTrack = trackID;
 
         Print(string.Format("[Unesennye Radio] Card insert OK radio=%d track=%d player=%d | Author: %s",
@@ -204,6 +207,20 @@ class UnesennyeServerRadioModule
 
         Print(string.Format("[Unesennye Radio] PLAY OK radio=%d track=%d by player=%d | Author: %s",
             radioID, trackID, context.GetSenderID(), UNSENNYE_RADIO_AUTHOR_NAME));
+    }
+
+    // Удаление сессии игрока (выход/деспаун)
+    void RemovePlayer(int playerID)
+    {
+        for (int i = 0; i < m_Sessions.Count(); i++)
+        {
+            if (m_Sessions[i].playerID == playerID)
+            {
+                delete m_Sessions[i];
+                m_Sessions.Remove(i);
+                return;
+            }
+        }
     }
 
     // ===== 303: выключить трек (рассылка остановки всем) =====
@@ -267,6 +284,19 @@ class UnesennyeRadioRPCServer
         if (g_RadioModule) g_RadioModule.OnStopTrack(context, buf);
     }
 };
+
+// ---------- Очистка сессий при выходе игрока (без утечек) ----------
+modded class PlayerBase
+{
+    override void OnBaseDestroyed()
+    {
+        super.OnBaseDestroyed();
+        if (UnesennyeRadioRPCServer.g_RadioModule)
+        {
+            UnesennyeRadioRPCServer.g_RadioModule.RemovePlayer(GetID());
+        }
+    }
+}
 
 // ---------- Точка старта: расширяем MissionServer БЕЗ правки Server_System.c ----------
 modded class MissionServer

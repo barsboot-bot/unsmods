@@ -30,15 +30,13 @@ static const string UNSENNYE_RADIO_AUTHOR_NAME = "KRa Tos (Константин)
 // ---------- Менеджер портативного аудио (активные звуки по ID рации) ----------
 class UnesennyePortableRadioManager
 {
-    private ref array<ref EffectSound> m_Sounds; // активные звуки, индекс = radioNetID
-    private const int MAX_TRACKS = 64;           // резерв под треки CfgUnesennyeTracks
+    private ref array<ref EffectSound> m_Sounds; // активные звуки
+    private ref array<int> m_Slots;              // radioNetID -> индекс в m_Sounds
 
     void UnesennyePortableRadioManager()
     {
         m_Sounds = new array<ref EffectSound>;
-        m_Sounds.Resize(MAX_TRACKS);
-        for (int i = 0; i < MAX_TRACKS; i++)
-            m_Sounds[i] = null;
+        m_Slots = new array<int>;
     }
 
     void ~UnesennyePortableRadioManager()
@@ -46,12 +44,34 @@ class UnesennyePortableRadioManager
         StopAll();
         delete m_Sounds;
         m_Sounds = null;
+        delete m_Slots;
+        m_Slots = null;
     }
 
-    // Индекс хранилища для сетевого ID рации
+    // Индекс хранилища: точное совпадение radioID (коллизии недопустимы).
+    // При отсутствии слота — выделяем новый (массив растёт под активные рации).
     private int SlotOf(int radioID)
     {
-        return Math.Abs(radioID) % MAX_TRACKS;
+        for (int i = 0; i < m_Slots.Count(); i++)
+        {
+            if (m_Slots[i] == radioID) return i;
+        }
+        m_Slots.Insert(radioID);
+        m_Sounds.Insert(null);
+        return m_Slots.Count() - 1;
+    }
+
+    private void ReleaseSlot(int radioID)
+    {
+        for (int i = 0; i < m_Slots.Count(); i++)
+        {
+            if (m_Slots[i] == radioID)
+            {
+                m_Slots.Remove(i);
+                m_Sounds.Remove(i);
+                return;
+            }
+        }
     }
 
     // PlayTrackFromRadio — 3D-звук из позиции рации (только SEffectManager.PlaySound)
@@ -59,12 +79,18 @@ class UnesennyePortableRadioManager
     {
         if (!soundSet || soundSet.Length() == 0) return;
 
-        IEntity radioEnt = GetGame().FindEntity(radioID);
         vector pos;
+        IEntity radioEnt = GetGame().FindEntity(radioID);
         if (radioEnt)
+        {
             pos = radioEnt.GetPosition();
+        }
         else
-            pos = GetGame().GetPlayer().GetPosition(); // рация в инвентаре — звук от игрока
+        {
+            PlayerBase pb = GetGame().GetPlayer(); // рация в инвентаре — звук от игрока
+            if (!pb) return;                       // нет локального игрока — не играем
+            pos = pb.GetPosition();
+        }
 
         int slot = SlotOf(radioID);
 
@@ -89,20 +115,24 @@ class UnesennyePortableRadioManager
     // StopTrackFromRadio — корректное уничтожение источника
     void StopTrackFromRadio(int radioID)
     {
-        int slot = SlotOf(radioID);
-        if (m_Sounds[slot])
+        for (int i = 0; i < m_Slots.Count(); i++)
         {
-            m_Sounds[slot].Stop();
-            delete m_Sounds[slot];
-            m_Sounds[slot] = null;
-            Print(string.Format("[Unesennye Radio] Stopped radio %d.", radioID));
+            if (m_Slots[i] != radioID) continue;
+            if (m_Sounds[i])
+            {
+                m_Sounds[i].Stop();
+                delete m_Sounds[i];
+                m_Sounds[i] = null;
+                Print(string.Format("[Unesennye Radio] Stopped radio %d.", radioID));
+            }
+            break;
         }
     }
 
     // Полная остановка всех звуков (lockdown / выход из игры)
     void StopAll()
     {
-        for (int i = 0; i < MAX_TRACKS; i++)
+        for (int i = 0; i < m_Sounds.Count(); i++)
         {
             if (m_Sounds[i])
             {
@@ -111,11 +141,16 @@ class UnesennyePortableRadioManager
                 m_Sounds[i] = null;
             }
         }
+        m_Slots.Clear();
     }
 
     bool IsPlaying(int radioID)
     {
-        return m_Sounds[SlotOf(radioID)] != null;
+        for (int i = 0; i < m_Slots.Count(); i++)
+        {
+            if (m_Slots[i] == radioID) return m_Sounds[i] != null;
+        }
+        return false;
     }
 };
 
@@ -199,15 +234,7 @@ class UnesennyeRadioClient
 // Только НОВые методы с префиксом Unesennye — стандартная логика рации не затронута.
 modded class RadioBase
 {
-    ref array<int> UnesennyeCards; // индексы треков CfgUnesennyeTracks во флешках
-
-    // Инициализируем хранилище карточек при создании рации (на обеих сторонах)
-    override void EInit()
-    {
-        super.EInit();
-        if (!UnesennyeCards)
-            UnesennyeCards = new array<int>;
-    }
+    ref array<int> UnesennyeCards; // индексы треков CfgUnesennyeTracks во флешках (лениво)
 
     // Вставить флешку с треком (trackIndex = индекс класса track_N)
     void UnesennyeInsertCard(int trackIndex)
@@ -263,9 +290,9 @@ modded class RadioBase
 modded class UnesennyeMusicCard_Base
 {
     // Использование флешки рядом с рацией: ищем RadioBase через GetObjectsAtPosition
-    override void ActionAttach(out UserContext context)
+    override void ActionUse(PlayerBase player, Man item, float quantity)
     {
-        super.ActionAttach(context);
+        super.ActionUse(player, item, quantity);
         if (GetGame().IsDedicated()) return;
         if (!UnesennyeClientRPC.GetAuth().IsAuthorized()) return;
 
