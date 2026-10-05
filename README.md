@@ -1,72 +1,24 @@
-# Unesennye — Музыка в автомобилях для DayZ (1.24+)
+# Unesennye Music System v1.0.0
+**Автор: KRa Tos (Константин)** | DayZ Standalone 1.24+
 
-**Автор: KRa Tos (Константин) | Проект: Unesennye**
+Система автомобильного радио из трёх модов:
 
-Система автомобильного радио из трёх модов с серверной защитой (handshake-RPC).
+| Мод | Роль | Установка |
+|---|---|---|
+| `@unesennye` | Клиент: UI, handshake, воспроизведение | Игрок + сервер |
+| `@unesennye_servermod` | Сервер: RPC-валидация, защита | Только сервер (приватно) |
+| `@unesennye_music_db` | Ассеты: .ogg + CfgUnesennyeTracks | Игрок + сервер |
 
-## Структура проекта
+## Защита
+Клиент при заходе шлёт `HS_REQUEST(id=100)`. Ждёт ответ **4000 мс**, опрос таймера каждые **500 мс**.
+Нет ответа (серверный мод не установлен → обработчик RPC не зарегистрирован) → блокировка радио/UI → `GetGame().Disconnect()` с сообщением *"Error: Required server mod 'unesennye_servermod' is missing."* Сервер при этом не крашится.
 
-```
-unsmods/
-├── @unesennye/                       # КЛИЕНТ (публичный)
-│   ├── mod.cpp
-│   ├── config.cpp                    # CfgPatches / CfgMods
-│   └── expansions/dayz/scripts/3_World/
-│       └── unesennye_client.c        # handshake, UI-каркас, CarScript-радио, TrackDB
-│
-├── @unesennye_servermod/             # СЕРВЕР (приватный, ключ активации)
-│   ├── mod.cpp
-│   ├── config.cpp
-│   └── expansions/dayz/scripts/3_World/
-│       └── unesennye_server.c        # RPC-обработчики, валидация, rate-limit, лог автора
-│
-├── @unesennye_music_db/              # АССЕТЫ (клиент + сервер)
-│   ├── mod.cpp
-│   ├── config.cpp                    # CfgSoundSets / CfgSoundShaders / CfgUnesennyeTracks
-│   └── data/sounds/tracks/           # demo_01.ogg, demo_02.ogg, ...
-│
-└── docs/
-    ├── ARCHITECTURE.c                # схема потоков RPC
-    └── ADDING_TRACKS.md              # инструкция по добавлению музыки
-```
-
-## Как это работает
-
-### Защита (Dependency Check & Blocking)
-1. При спавне персонажа клиент шлёт `CallRPC(RPC_Unesennye_Handshake, ALL, challenge)`.
-2. **Если `@unesennye_servermod` установлен:** `MissionServer::RPC_Unesennye_Handshake`
-   регистрирует игрока как авторизованного и отвечает `RPC_Unesennye_AuthOK(playerID, token(challenge))`.
-   Клиент сверяет токен → радио разблокировано.
-3. **Если серверного мода нет:** функция не зарегистрирована → сервер молча игнорирует
-   вызов (без краша) → через 10 секунд клиент блокирует радио и выполняет
-   `RequestDisconnect` с сообщением:
-   `Error: Required server mod 'unesennye_servermod' is missing.`
-
-### Воспроизведение
-- Все команды (play/stop/tracklist) идут **через сервер**, который валидирует:
-  трек существует в `CfgUnesennyeTracks`, игрок реально сидит в `CarScript`,
-  анти-спам кулдаун 5 сек.
-- Сервер ретранслирует `BroadcastPlay(carNetID, trackID)` — звук играет локально
-  у каждого клиента в радиусе 90 м от машины (`PlaySoundCD`, 3D-позиционирование).
-- Никакого стриминга аудио по сети: треки лежат в `@unesennye_music_db` у всех.
-
-## Установка на сервер
-
-Порядок в `serverDZ.cfg` (`mod=`):
-
-```
-mod=@unesennye;@unesennye_servermod;@unesennye_music_db
-```
-
-Клиенты: `@unesennye` + `@unesennye_music_db` (серверный мод клиенту **не выдаётся** —
-в этом и смысл защиты).
+## Сборка в DayZ Workbench
+1. File → Add Mod → `@unesennye`, указать скрипты: `scripts/` (префиксы 1_Core/4_World стандартные DZ_Scripts). Build → @ExpackPak → `@unesennye` (Scripts Only).
+2. Аналогично `@unesennye_servermod` (scripts/1_Core/init.c + scripts/4_World/*.c).
+3. `@unesennye_music_db`: Scripts НЕ содержит — Build → Data&Config Only после добавления .ogg.
+4. На сервере в load-mods порядок: `@DayZ-Epoch/DZ_...;@unesennye_music_db;@unesennye;@unesennye_servermod`.
+5. Проверка авторства в RPT: `[Unesennye_ServerMod v1.0.0] ACTIVE. Author: KRa Tos (Константин)`.
 
 ## Добавление треков
-См. [docs/ADDING_TRACKS.md](docs/ADDING_TRACKS.md) — только правка `config.cpp`
-и копирование `.ogg`, перекомпиляция скриптов не нужна.
-
-## Водяные знаки
-- `author = "KRa Tos (Константин)"` во всех `mod.cpp` / `CfgMods` / `CfgPatches`;
-- заголовок `// Author: KRa Tos (Константин) | Project: Unesennye` в каждом исходнике;
-- `MissionServer::GetModAuthor()` + запись в RPT при старте сервера;
-- версия `v1.0.0` в названии мода (отображается в лаунчере).
+См. `@unesennye_music_db/data/sounds/tracks/README.txt` — правка только config.cpp + .ogg, скрипты не перекомпилируются.

@@ -1,30 +1,29 @@
 // Author: KRa Tos (Константин) | Project: Unesennye
 class CfgPatches
 {
-    class Unesennye_Client
+    class unesennye
     {
-        author      = "KRa Tos (Константин)";
-        name        = "Unesennye Car Radio (Client)";
-        version     = "1.0.0";
-        requiredAddons[] = {"DayZ_Core"};
+        name = "Unesennye Client";
+        author = "KRa Tos (Константин)";
+        version = "1.0.0";
+        url = "";
         requiredVersion = 1.24;
-        units[]     = {};
-        weapons[]   = {};
+        requiredAddons[] = {"DZ_Data", "DZ_Scripts"};
     };
 };
 
 class CfgMods
 {
-    class Unesennye_Client
+    class unesennye
     {
-        id          = "unesennye";
-        dir         = "@unesennye";
-        name        = "Unesennye Car Radio [CLIENT] v1.0.0";
-        author      = "KRa Tos (Константин)";
-        version     = "1.0.0";
-        type        = "client";
-        hideName    = 0;
-        hideIcon    = 0;
-        action      = "";
+        name = "Unesennye Music System - CLIENT v1.0.0";
+        dir = "unesennye";
+        action = "";
+        hideName = 0;
+        hideIcon = 1;
+        version = "1.0.0";
+        author = "KRa Tos (Константин)";
+        authorID = "KRaTos";
+        description = "Клиент автомобильного радио. Работает только с @unesennye_servermod на сервере.";
     };
 };

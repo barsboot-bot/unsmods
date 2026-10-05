@@ -1,30 +1,33 @@
 // Author: KRa Tos (Константин) | Project: Unesennye
 class CfgPatches
 {
-    class Unesennye_ServerMod
+    class unesennye_servermod
     {
-        author      = "KRa Tos (Константин)";
-        name        = "Unesennye Server Mod";
-        version     = "1.0.0";
-        requiredAddons[] = {"DayZ_Core"};
+        name = "Unesennye Server Mod";
+        author = "KRa Tos (Константин)";
+        version = "1.0.0";
+        url = "";
         requiredVersion = 1.24;
-        units[]     = {};
-        weapons[]   = {};
+        requiredAddons[] = {"DZ_Data", "DZ_Scripts"};
     };
 };
 
 class CfgMods
 {
-    class Unesennye_ServerMod
+    class unesennye_servermod
     {
-        id          = "unesennye_servermod";
-        dir         = "@unesennye_servermod";
-        name        = "Unesennye Music [SERVER]";
-        author      = "KRa Tos (Константин)";
-        version     = "1.0.0";
-        type        = "server";
-        hideName    = 0;
-        hideIcon    = 0;
-        action      = "";
+        name = "Unesennye Music System - SERVER v1.0.0";
+        dir = "unesennye_servermod";
+        action = "";
+        hideName = 0;
+        hideIcon = 1;
+        version = "1.0.0";
+        author = "KRa Tos (Константин)";
+        authorID = "KRaTos";
+        description = "Серверный мод автомобильного радио. Ключ активации клиента @unesennye.";
     };
 };
+
+// Структура scripts/ (1_Core, 4_World) подхватывается стандартным
+// конфигом DZ_Scripts в DayZ Workbench — отдельный CfgScriptConfigs не требуется.
+// Файлы компилируются в порядке слоёв: 1_Core/init.c -> 4_World/*.c
