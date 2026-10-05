@@ -21,6 +21,12 @@ enum UnesennyeRadioRPC
 
 static const string UNSENNYE_RADIO_AUTHOR_NAME = "KRa Tos (Константин)"; // водяной знак
 
+// ---------- Скрытая метка авторства (серверный радио-модуль) ----------
+static string GetRadioServerModAuthor()
+{
+    return UNSENNYE_RADIO_AUTHOR_NAME; // "KRa Tos (Константин)"
+}
+
 // ---------- Запись о состоянии рации у игрока ----------
 class UnesennyeRadioSession
 {

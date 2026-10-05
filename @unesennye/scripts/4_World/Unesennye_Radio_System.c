@@ -27,6 +27,12 @@ enum UnesennyeRadioRPC
 static const int UNSENNYE_RADIO_PROTO_VERSION = 1;
 static const string UNSENNYE_RADIO_AUTHOR_NAME = "KRa Tos (Константин)"; // водяной знак
 
+// ---------- Скрытая метка авторства (радио-модуль) ----------
+static string GetRadioModAuthor()
+{
+    return UNSENNYE_RADIO_AUTHOR_NAME; // "KRa Tos (Константин)"
+}
+
 // ---------- Менеджер портативного аудио (активные звуки по ID рации) ----------
 class UnesennyePortableRadioManager
 {
