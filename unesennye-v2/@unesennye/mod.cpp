@@ -1,0 +1,9 @@
+name = "Unesennye v2 (client)";
+picture = "";
+logo = "";
+logoSmall = "";
+logoOver = "";
+tooltip = "Unesennye v2: клиентская часть (рукопожатие, воспроизведение).";
+overview = "Клиентская часть Unesennye v2. Требует @unesennye_music_db и @unesennye_servermod. Без серверного мода клиент отключается после таймаута рукопожатия.";
+author = "barsboot-bot";
+version = "2.0.0";

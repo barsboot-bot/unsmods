@@ -1,0 +1,9 @@
+name = "Unesennye v2 (server)";
+picture = "";
+logo = "";
+logoSmall = "";
+logoOver = "";
+tooltip = "Unesennye v2: серверная часть (проверка запросов, рассылка).";
+overview = "Серверная часть Unesennye v2. Требует @unesennye_music_db. Проверяет каждый запрос клиента и только потом меняет состояние.";
+author = "barsboot-bot";
+version = "2.0.0";

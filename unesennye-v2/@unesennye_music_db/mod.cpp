@@ -1,0 +1,9 @@
+name = "Unesennye Music DB v2";
+picture = "";
+logo = "";
+logoSmall = "";
+logoOver = "";
+tooltip = "Unesennye Music DB v2: общий реестр треков и протокол (клиент + сервер).";
+overview = "Общая база: протокол, реестр треков и альбомов, действия карт и машин. Треки задаются в tools/tracks.json. Обязательна для клиентского и серверного модов.";
+author = "barsboot-bot";
+version = "2.0.0";

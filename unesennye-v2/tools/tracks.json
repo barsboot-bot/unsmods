@@ -1,0 +1,14 @@
+{
+  "_comment": "Манифест треков Unesennye v2. Источник правды для config.cpp. Имена треков и файлы здесь — примеры; замените на свои. Аудиофайлы .ogg в репозиторий не коммитятся.",
+  "tracks": [
+    { "id": 1, "title": "Пример: трек 1 (машина)", "file": "track_001.ogg", "car": true,  "volume": 0.85, "range": 60 },
+    { "id": 2, "title": "Пример: трек 2 (машина)", "file": "track_002.ogg", "car": true,  "volume": 0.85, "range": 60 },
+    { "id": 3, "title": "Пример: трек 3 (машина)", "file": "track_003.ogg", "car": true,  "volume": 0.85, "range": 60 },
+    { "id": 4, "title": "Пример: трек 4 (альбом)", "file": "track_004.ogg", "car": false, "volume": 0.85, "range": 40 },
+    { "id": 5, "title": "Пример: трек 5 (альбом)", "file": "track_005.ogg", "car": false, "volume": 0.85, "range": 40 },
+    { "id": 6, "title": "Пример: трек 6 (альбом)", "file": "track_006.ogg", "car": false, "volume": 0.85, "range": 40 }
+  ],
+  "albums": [
+    { "id": "Album01", "title": "Пример: альбом 01", "tracks": [4, 5, 6] }
+  ]
+}
